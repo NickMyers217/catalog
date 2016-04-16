@@ -1,1 +1,3 @@
-I am empty..... for now!
+# Todos
+* Authentication (oauth2?)
+* Styling (bootstrap?)
