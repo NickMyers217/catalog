@@ -1,6 +1,6 @@
 # This file contains the HTTP routes for the website
 
-from flask import Flask
+from flask import Flask, render_template
 
 
 # Define the app
@@ -11,13 +11,15 @@ app = Flask(__name__)
 @app.route('/')
 @app.route('/catalog/')
 def landing():
-    return 'Landing page'
+    return render_template('catalog.html')
+
 
 # Route to show a catedories items
 @app.route('/catalog/<category>/')
 @app.route('/catalog/<category>/items/')
 def items(category):
     return 'Items for %s!' % category
+
 
 # Route to show a single item within a category
 @app.route('/catalog/<category>/<item>/')
