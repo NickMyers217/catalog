@@ -1,6 +1,6 @@
 # This file contains the HTTP routes for the website
 
-from flask import Flask, render_template
+from flask import Flask, render_template, request, redirect, url_for
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from database import Base, Category, Item
@@ -51,6 +51,23 @@ def itemDesc(cat_name, item_name):
     if item.count() == 0:
         return '404 not found'
     return render_template('item.html', cat = cat_name, item = item.one())
+
+
+# Route to delete items
+@app.route('/catalog/<item_name>/delete/', methods = ['GET', 'POST'])
+def itemDelete(item_name):
+    if request.method == 'GET':
+        item = db.query(Item).filter_by(name = item_name)
+        if item.count() == 0:
+            return '404 not found'
+        return render_template('item_delete.html', item = item.one())
+    if request.method == 'POST':
+        item = db.query(Item).filter_by(name = item_name)
+        if item.count() == 0:
+            return redirect(url_for('landing'))
+        db.delete(item.one())
+        db.commit()
+        return redirect(url_for('landing'))
 
 
 # Start the server
