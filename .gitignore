@@ -1,4 +1,6 @@
 *~
+templates/*~
 *#
+templates/*~
 *.pyc
 *.db
