@@ -1,0 +1,19 @@
+{% extends "layout.html" %}
+
+{% block title %} Catalog {% endblock %}
+
+{% block head %}
+  {{ super() }}
+{% endblock %}
+
+{% block content %}
+  <h1>Edit Item</h1>
+  <form method="POST" action="{{ url_for('itemEdit', item_name = item.name) }}">
+    <p>Title</p>
+    <input name="name" type="text" maxLength="80" placeholder="{{ item.name }}">
+    <p>Description</p>
+    <input name="desc" type="tect" macLength="500" placeholder="{{ item.desc }}">
+    <br><br>
+    <input type="submit" value="Submit!">
+  </form>
+{% endblock %}
