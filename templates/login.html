@@ -3,37 +3,36 @@
 {% block title %} Catalog {% endblock %}
 
 {% block head %}
-  <meta name="google-signin-scope" content="profile email">
-  <meta name="google-signin-client_id" content="562432597158-ouirs3oa9papg200us2ae0rormi1hkpi.apps.googleusercontent.com">
   {{ super() }}
   <script src="https://apis.google.com/js/platform.js" async defer></script>
 {% endblock %}
 {% block content %}
   <h1>Login</h1>
   <div id="googleButton">
-    <div class="g-signin2" data-onsuccess="signInCallback"
-	 data-theme="dark"
-	 data-redirecturi="postmessage"
-	 data-accesstype="offline"
-	 data-cookiepolicy="single_host_origin"
-	 data-callback="signInCallback"
-	 data-approvalprompt="force">
-    </div>
+    <span class="g-signin"
+	  data-theme="dark"
+	  data-scope="openid email"
+	  data-clientid="562432597158-ouirs3oa9papg200us2ae0rormi1hkpi.apps.googleusercontent.com"
+	  data-redirecturi="postmessage"
+	  data-accesstype="offline"
+	  data-cookiepolicy="single_host_origin"
+	  data-callback="signInCallback"
+	  data-approvalprompt="force">
+    </span>
   </div>
   <div id="result"></div>
   <script>
-    function signInCallback (googleUser) {
+    function signInCallback (authResult) {
       console.log('Inside callback')
-      var id_token = googleUser.getAuthResponse().id_token;
-      console.log(id_token)
+      console.log(authResult)
 
-      if (id_token) {
+      if (authResult.code) {
         // Verify the token on the back end via AJAX
         $.ajax({
           type: 'POST',
           url: '/googleLogin?state={{state}}',
           processData: false,
-          data: id_token,
+          data: authResult.code,
           contentType: 'application/octet-stream; charset=utf-8',
           success: function (result) {
             // Handle or verify the server response if necessary.
@@ -44,6 +43,9 @@
             } else {
               $('#result').html('Failed to make a server-side call.')
             }
+          },
+          failure: function (result) {
+            console.log(result)
           }
         })
       }
