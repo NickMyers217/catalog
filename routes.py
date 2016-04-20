@@ -1,6 +1,8 @@
 # This file contains the HTTP routes for the website
 
-from flask import Flask, render_template, request, redirect, url_for
+import random, string
+
+from flask import Flask, render_template, request, redirect, url_for, session
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from database import Base, Category, Item
@@ -24,6 +26,15 @@ def landing():
     cats = db.query(Category).all()
     items = db.query(Item).all()
     return render_template('catalog.html', cats = cats, items = items)
+
+
+# Route for logging in
+@app.route('/login/')
+def showLogin():
+    state = ''.join(random.choice(string.ascii_uppercase + string.digits)
+                    for x in xrange(32))
+    session['state'] = state
+    return render_template('login.html', state = session['state'])
 
 
 # Route to show a categorie's items
@@ -92,4 +103,7 @@ def itemDelete(item_name):
 
 # Start the server
 if __name__ == '__main__':
-    app.run(host = '0.0.0.0', port = 8080, debug = True)
+    import uuid
+    app.secret_key = str(uuid.uuid4())
+    app.debug = True
+    app.run(host = '0.0.0.0', port = 8080)
