@@ -9,25 +9,29 @@
 {% block content %}
   <h1>Login</h1>
   <div id="googleButton">
-    <div class="g-signin2"
-	 data-theme="dark"
-	 data-redirecturi="postmessage"
-	 data-accesstype="offline"
-	 data-cookiepolicy="single_host_origin"
-	 data-onsuccess="onSignIn"
-	 data-onfailure="onSignInFailure">
-    </div>
+    <div class="g-signin2" data-theme="dark" data-redirecturi="postmessage" data-accesstype="offline" data-onsuccess="onSignIn" data-onfailure="onSignInFailure"></div>
   </div>
   <div id="result"></div>
   <script>
-    $(document).ready(function start () {
+    // An IIFE that sets up google sign in and ouath2
+    (function () {
+      // Initialize the auth2 object
       gapi.load('auth2', function () {
-        auth2 = gapi.auth2.init({
+        gapi.auth2.init({
           client_id: '562432597158-ouirs3oa9papg200us2ae0rormi1hkpi.apps.googleusercontent.com'
-        })
+        }).then(signOut)
       })
-    })
-    
+    })()
+
+    // Signs users out of the client
+    function signOut () {
+      var auth2 = gapi.auth2.getAuthInstance()
+      if(auth2.isSignedIn.get()) {
+        auth2.signOut()
+      }
+    }
+
+    // Callback to sign a user in on the server
     function onSignIn (authResult) {
       if (authResult.code) {
         // Verify the token on the back end via AJAX
@@ -54,6 +58,7 @@
       }
     } 
 
+    // Failure callback
     function onSignInFailure () {
       console.log('Failed to sign in!');
     }
