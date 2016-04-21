@@ -50,7 +50,8 @@ def googleLogin():
         return response
     # If we get back an access token, we can validate it is valid
     access_token = credentials.access_token
-    url = ('https://www.googleapis.com/oauth2/v1/tokeninfo?access_token=%s' % access_token)
+    url = ('https://www.googleapis.com/oauth2/v1/tokeninfo?access_token=%s'
+           % access_token)
     h = httplib2.Http()
     result = json.loads(h.request(url, 'GET')[1])
     if result.get('error') is not None:
@@ -67,7 +68,8 @@ def googleLogin():
         return response
     # Make sure the token has the same client ID as this app
     if result['issued_to'] != CLIENT_ID:
-        response = make_response(json.dumps('Token is for incorrect client id!'), 401)
+        response = make_response(json.dumps('Token is for incorrect client id!'),
+                                 401)
         response.headers['Content-type'] = 'application/json'
         print 'Token for wrong app!'
         return response

@@ -4,28 +4,31 @@
 
 {% block head %}
   {{ super() }}
-  <script src="https://apis.google.com/js/platform.js" async defer></script>
+  <script src="https://apis.google.com/js/platform.js"></script>
 {% endblock %}
 {% block content %}
   <h1>Login</h1>
   <div id="googleButton">
-    <span class="g-signin"
-	  data-theme="dark"
-	  data-scope="openid email"
-	  data-clientid="562432597158-ouirs3oa9papg200us2ae0rormi1hkpi.apps.googleusercontent.com"
-	  data-redirecturi="postmessage"
-	  data-accesstype="offline"
-	  data-cookiepolicy="single_host_origin"
-	  data-callback="signInCallback"
-	  data-approvalprompt="force">
-    </span>
+    <div class="g-signin2"
+	 data-theme="dark"
+	 data-redirecturi="postmessage"
+	 data-accesstype="offline"
+	 data-cookiepolicy="single_host_origin"
+	 data-onsuccess="onSignIn"
+	 data-onfailure="onSignInFailure">
+    </div>
   </div>
   <div id="result"></div>
   <script>
-    function signInCallback (authResult) {
-      console.log('Inside callback')
-      console.log(authResult)
-
+    $(document).ready(function start () {
+      gapi.load('auth2', function () {
+        auth2 = gapi.auth2.init({
+          client_id: '562432597158-ouirs3oa9papg200us2ae0rormi1hkpi.apps.googleusercontent.com'
+        })
+      })
+    })
+    
+    function onSignIn (authResult) {
       if (authResult.code) {
         // Verify the token on the back end via AJAX
         $.ajax({
@@ -50,5 +53,9 @@
         })
       }
     } 
+
+    function onSignInFailure () {
+      console.log('Failed to sign in!');
+    }
   </script>
 {% endblock %}
