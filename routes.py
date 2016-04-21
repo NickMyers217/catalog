@@ -25,16 +25,29 @@ CLIENT_ID = json.loads(open('client_secrets.json', 'r').read())['web']['client_i
 app = Flask(__name__)
 
 
+# Utility for making JSON responses
+def quick_json_res(msg, code):
+    ''' This function returns a constructed JSON response
+      Args:
+        msg: The message
+        code: The http result code
+    '''
+    response = make_response(json.dumps(msg), code)
+    response.headers['Content-Type'] = 'application/json'
+    return response
+
+
 # Ajax route for google oauth
 @app.route('/googleLogin', methods=['POST'])
 def googleLogin():
     print 'Beginnig google oauth login!'
+
     # Verify the anti xss forgery token from the client matches
     if request.args.get('state') != session['state']:
-        response = make_response(json.dumps('Invalid anti xss token!'), 401)
-        response.headers['Content-Type'] = 'application/json'
-        print 'This might be an xss attack, abort!'
-        return response
+        err = 'This might be an xss attack, aborted!'
+        print err
+        return quick_json_res(err, 401)
+
     # Since this is not an xss attack, we can proceed
     # and exchange the one time authorization code from google
     code = request.data
@@ -44,10 +57,10 @@ def googleLogin():
         credentials = oauth_flow.step2_exchange(code)
         print 'Code exchanged!'
     except FlowExchangeError:
-        response = make_response(json.dumps('Failed to exchange code!'), 401)
-        response.headers['Content-type'] = 'application/json'
-        print 'Error while exchanging Code!'
-        return response
+        err = 'Error while exchanging Code!'
+        print err
+        return quick_json_res(err, 401)
+
     # If we get back an access token, we can validate it is valid
     access_token = credentials.access_token
     url = ('https://www.googleapis.com/oauth2/v1/tokeninfo?access_token=%s'
@@ -55,32 +68,30 @@ def googleLogin():
     h = httplib2.Http()
     result = json.loads(h.request(url, 'GET')[1])
     if result.get('error') is not None:
-        response = make_response(json.dumps(result.get('error')), 500)
-        response.headers['Content-Type'] = 'application/json'
-        print 'Token is invalid!'
-        return response
+        print result.get('error')
+        return quick_json_res(result.get('error'), 400)
+
     # The access token is valid, but is it for the correct user?
     gplus_id = credentials.id_token['sub']
     if result['user_id'] != gplus_id:
-        response = make_response(json.dumps('Token is for incorrect user!'), 401)
-        response.headers['Content-type'] = 'application/json'
-        print 'Token for wrong user!'
-        return response
+        err = 'Token for wrong user!'
+        print err
+        return quick_json_res(err, 401)
+
     # Make sure the token has the same client ID as this app
     if result['issued_to'] != CLIENT_ID:
-        response = make_response(json.dumps('Token is for incorrect client id!'),
-                                 401)
-        response.headers['Content-type'] = 'application/json'
-        print 'Token for wrong app!'
-        return response
+        err = 'Token for wrong app!'
+        print err
+        return quick_json_res(err, 401)
+
     # See if the user is already logged in
     stored_credentials = session.get('credentials')
     stored_gplus_id = session.get('gplus_id')
     if stored_credentials is not None and gplus_id == stored_gplus_id:
-        response = make_response(json.dumps('User already connected!'), 200)
-        response.headers['Content-Type'] = 'application/json'
-        print 'User already logged in!'
-        return response
+        err = 'User already logged in!'
+        print err
+        return quick_json_res(err, 200)
+
     # The user is not logged in, so we need to store his stuff
     session['credentials'] = credentials.to_json()
     session['gplus_id'] = gplus_id
@@ -91,6 +102,7 @@ def googleLogin():
     session['username'] = data['name']
     session['picture'] = data['picture']
     session['email'] = data['email']
+
     output = ''
     output += '<h1>Welcome, '
     output += session['username']
@@ -98,8 +110,36 @@ def googleLogin():
     output += '<img src="'
     output += session['picture']
     output += ' " style = "width: 300px; height: 300px;border-radius: 150px;-webkit-border-radius: 150px;-moz-border-radius: 150px;"> '
+
     print 'Success!'
     return output
+
+
+# Route to disconnect a Google user
+@app.route('/googleLogout')
+def googleLogout():
+    # Check to make sure the user is actually logged in
+    credentials = session.get('credentials')
+    if credentials is None:
+        return quick_json_res('Current user not logged in.', 401)
+
+    # Use the google api to revoke the token
+    credentials = credentials.from_json()
+    token = credentials.access_token
+    url = 'https://accounts.google.com/o/oauth2/revoke?token=%s' % token
+    h = httplib2.Http()
+    result = h.request(url, 'GET')[0]
+
+    # Delete their information
+    if result['status'] == '200':
+        del session['credentials']
+        del session['gplus_id']
+        del session['username']
+        del session['email']
+        del session['picture']
+        return quick_json_res('Disconnected!', 200)
+    else:
+        return quick_json_res('Failed to revoke token!', 400)
 
 
 # Route for the catalog page
