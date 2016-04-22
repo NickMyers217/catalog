@@ -5,7 +5,7 @@ import random, string, json, httplib2, requests
 from flask import Flask, render_template, request, redirect, url_for, session, make_response
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from database import Base, Category, Item
+from database import Base, Category, Item, User
 from oauth2client.client import flow_from_clientsecrets
 from oauth2client.client import FlowExchangeError
 
@@ -41,6 +41,43 @@ def quick_json_res(msg, code):
 def is_logged_in():
     ''' Returns true if the user is logged in '''
     return 'username' in session
+
+
+# Utility for querying usert in the database
+def get_user_info(user_id):
+    ''' Returns a user from the database
+      Args:
+        user_id: The id of the user to retrieve
+    '''
+    return db.query(User).filter_by(id=user_id).one()
+
+
+# Utility for querying users based on an email
+def get_user_id(email):
+    ''' Returns the id of the user if found, or None
+      Args:
+        email: The email of the user to look up
+    '''
+    try:
+        return db.query(User).filter_by(email=email).one().id
+    except:
+        return None
+
+
+# Utility for creating a user
+def create_user():
+    ''' Creates a user in the database and returns their id '''
+    # Query the user email to see if they already exist
+    user_id = get_user_id(session['email'])
+
+    # Create them if needed, otherwise just return the ID
+    if user_id is None:
+        new_user = User(name=session['username'], email=session['email'], picture=session['picture'])
+        db.add(new_user)
+        db.commit()
+        return db.query(User).filter_by(email=session['email']).one().id
+    else:
+        return user_id
 
 
 # Route for the catalog page
@@ -117,6 +154,7 @@ def googleLogin():
     session['username'] = data['name']
     session['picture'] = data['picture']
     session['email'] = data['email']
+    create_user()
 
     output = ''
     output += '<h1>Welcome, '
@@ -214,7 +252,8 @@ def itemNew():
         # Make sure the item's category is valid
         if cats.count() > 0:
             # Add the item to the database
-            item = Item(name=item_name, desc=item_desc, category=cats.one())
+            user_id = get_user_id(session['email'])
+            item = Item(name=item_name, desc=item_desc, category=cats.one(), user_id=user_id)
             db.add(item)
             db.commit()
         # Redirect to landing
@@ -250,12 +289,14 @@ def itemEdit(item_name):
             # Make sure the item exists
             if items.count() > 0:
                 item = items.one()
-                # Edit the item
-                item.name = new_item_name
-                item.desc = new_item_desc
-                # TODO: get this bug fixed
-                item.category = cats.one()
-                db.commit()
+                # Make sure the correct user is issuing this request
+                if item.user_id == get_user_id(session['email']):
+                    # Edit the item
+                    item.name = new_item_name
+                    item.desc = new_item_desc
+                    # TODO: get this bug fixed
+                    item.category = cats.one()
+                    db.commit()
         # Redirect to landing
         return redirect(url_for('landing'))
 
@@ -280,8 +321,10 @@ def itemDelete(item_name):
         item = db.query(Item).filter_by(name=item_name)
         # Make sure the item exists
         if item.count() > 0:
-            db.delete(item.one())
-            db.commit()
+            # Make sure the correct user is issuing this request
+            if item.one().user_id == get_user_id(session['email']):
+                db.delete(item.one())
+                db.commit()
         # Redirect to the landing
         return redirect(url_for('landing'))
 
