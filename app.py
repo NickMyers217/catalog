@@ -37,6 +37,21 @@ def quick_json_res(msg, code):
     return response
 
 
+# Utility for seeing if a user is logged in
+def is_logged_in():
+    ''' Returns true if the user is logged in '''
+    return 'username' in session
+
+
+# Route for the catalog page
+@app.route('/')
+@app.route('/catalog')
+def landing():
+    cats = db.query(Category).all()
+    items = db.query(Item).all()
+    return render_template('catalog.html', cats=cats, items=items)
+
+
 # Ajax route for google oauth
 @app.route('/googleLogin', methods=['POST'])
 def googleLogin():
@@ -93,11 +108,11 @@ def googleLogin():
         return quick_json_res(err, 200)
 
     # The user is not logged in, so we need to store his stuff
-    session['credentials'] = credentials.to_json()
+    session['credentials'] = credentials.access_token
     session['gplus_id'] = gplus_id
     userinfo_url = 'https://www.googleapis.com/oauth2/v1/userinfo'
     params = { 'access_token': credentials.access_token, 'alt': 'json' }
-    answer = requests.get(userinfo_url, params = params)
+    answer = requests.get(userinfo_url, params=params)
     data = answer.json()
     session['username'] = data['name']
     session['picture'] = data['picture']
@@ -124,9 +139,7 @@ def googleLogout():
         return quick_json_res('Current user not logged in.', 401)
 
     # Use the google api to revoke the token
-    credentials = credentials.from_json()
-    token = credentials.access_token
-    url = 'https://accounts.google.com/o/oauth2/revoke?token=%s' % token
+    url = 'https://accounts.google.com/o/oauth2/revoke?token=%s' % credentials
     h = httplib2.Http()
     result = h.request(url, 'GET')[0]
 
@@ -142,15 +155,6 @@ def googleLogout():
         return quick_json_res('Failed to revoke token!', 400)
 
 
-# Route for the catalog page
-@app.route('/')
-@app.route('/catalog')
-def landing():
-    cats = db.query(Category).all()
-    items = db.query(Item).all()
-    return render_template('catalog.html', cats = cats, items = items)
-
-
 # Route for logging in
 @app.route('/login')
 def showLogin():
@@ -160,70 +164,125 @@ def showLogin():
     state = ''.join(random.choice(string.ascii_uppercase + string.digits)
                     for x in xrange(32))
     session['state'] = state
-    return render_template('login.html', state = session['state'])
+    return render_template('login.html', state=session['state'])
 
 
 # Route to show a categorie's items
 @app.route('/catalog/<cat_name>/')
 @app.route('/catalog/<cat_name>/items/')
 def items(cat_name):
-    category = db.query(Category).filter_by(name = cat_name)
+    category = db.query(Category).filter_by(name=cat_name)
+    # Make sure the category exists
     if category.count() == 0:
         return '404 not found'
     items = db.query(Item).filter_by(category_id = category.one().id)
-    return render_template('items.html',
-                           cat   = cat_name,
-                           items = items.all(),
-                           cnt   = items.count())
+    return render_template('items.html', cat=cat_name, items=items.all(), cnt=items.count())
 
 
 # Route to show a single item within a category
 @app.route('/catalog/<cat_name>/<item_name>/')
 def itemDesc(cat_name, item_name):
-    category = db.query(Category).filter_by(name = cat_name)
+    category = db.query(Category).filter_by(name=cat_name)
+    # Make sure the category exists
     if category.count() == 0:
         return '404 not found'
-    item = db.query(Item).filter_by(category_id = category.one().id,
-                                    name = item_name)
+    item = db.query(Item).filter_by(category_id=category.one().id, name=item_name)
+    # Make sure th item exists
     if item.count() == 0:
         return '404 not found'
-    return render_template('item.html', cat = cat_name, item = item.one())
+    return render_template('item.html', cat=cat_name, item=item.one())
+
+
+# Route to add a new item
+@app.route('/catalog/new/', methods = ['GET', 'POST'])
+def itemNew():
+    # Force user to log in
+    if not is_logged_in():
+        return redirect(url_for('showLogin'))
+
+    # Display the form for GET requests
+    if request.method == 'GET':
+        cats = db.query(Category)
+        return render_template('item_new.html', numcats=cats.count(), cats=cats.all())
+    
+    # Handle the database for POST requests
+    if request.method == 'POST':
+        item_name = request.form['item_name']
+        item_desc = request.form['item_desc']
+        item_cat_name = request.form['item_cat_name']
+        cats = db.query(Category).filter_by(name=item_cat_name)
+        # Make sure the item's category is valid
+        if cats.count() > 0:
+            # Add the item to the database
+            item = Item(name=item_name, desc=item_desc, category=cats.one())
+            db.add(item)
+            db.commit()
+        # Redirect to landing
+        return redirect(url_for('landing'))
 
 
 # Route to edit items
-@app.route('/catalog/<item_name>/edit/', methods = ['GET', 'POST'])
+@app.route('/catalog/<item_name>/edit/', methods=['GET', 'POST'])
 def itemEdit(item_name):
+    # Force user to log in
+    if not is_logged_in():
+        return redirect(url_for('showLogin'))
+
+    # Display the form for GET requests
     if request.method == 'GET':
-        item = db.query(Item).filter_by(name = item_name)
+        item = db.query(Item).filter_by(name=item_name)
+        # Make sure the item exists
         if item.count() == 0:
             return '404 not found'
-        return render_template('item_edit.html', item = item.one())
+        cats = db.query(Category)
+        return render_template('item_edit.html', numcats=cats.count(), cats=cats.all(),
+                               item=item.one())
+
+    # Handle the database for POST requests
     if request.method == 'POST':
-        item = db.query(Item).filter_by(name = item_name)
-        if item.count() == 0:
-            return redirect(url_for('landing'))
-        item = item.one()
-        item.name = request.form['name']
-        item.desc = request.form['desc']
-        db.add(item)
-        db.commit()
+        new_item_name = request.form['item_name']
+        new_item_desc = request.form['item_desc']
+        item_cat_name = request.form['item_cat_name']
+        cats = db.query(Category).filter_by(name=item_cat_name)
+        # Make sure the item's category is valid
+        if cats.count() > 0:
+            items = db.query(Item).filter_by(category_id=cats.one().id, name=item_name)
+            # Make sure the item exists
+            if items.count() > 0:
+                item = items.one()
+                # Edit the item
+                item.name = new_item_name
+                item.desc = new_item_desc
+                # TODO: get this bug fixed
+                item.category = cats.one()
+                db.commit()
+        # Redirect to landing
         return redirect(url_for('landing'))
 
 
 # Route to delete items
 @app.route('/catalog/<item_name>/delete/', methods = ['GET', 'POST'])
 def itemDelete(item_name):
+    # Force the user to log in
+    if not is_logged_in():
+        return redirect(url_for('showLogin'))
+
+    # Show the delete form for GET requests
     if request.method == 'GET':
-        item = db.query(Item).filter_by(name = item_name)
+        item = db.query(Item).filter_by(name=item_name)
+        # Make sure the item exists
         if item.count() == 0:
             return '404 not found'
-        return render_template('item_delete.html', item = item.one())
+        return render_template('item_delete.html', item=item.one())
+
+    # Handle the database for post requests
     if request.method == 'POST':
-        item = db.query(Item).filter_by(name = item_name)
-        if item.count() == 0:
-            return redirect(url_for('landing'))
-        db.delete(item.one())
-        db.commit()
+        item = db.query(Item).filter_by(name=item_name)
+        # Make sure the item exists
+        if item.count() > 0:
+            db.delete(item.one())
+            db.commit()
+        # Redirect to the landing
         return redirect(url_for('landing'))
 
 
@@ -232,4 +291,4 @@ if __name__ == '__main__':
     import uuid
     app.secret_key = str(uuid.uuid4())
     app.debug = True
-    app.run(host = '0.0.0.0', port = 8080)
+    app.run(host='0.0.0.0', port=8080)

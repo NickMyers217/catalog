@@ -7,23 +7,19 @@
 {% endblock %}
 
 {% block content %}
-  <h1>Edit Item</h1>
-  <form method="POST" action="{{ url_for('itemEdit', item_name = item.name) }}">
+  <h1>New Item</h1>
+  <form method="POST" action="{{ url_for('itemNew') }}">
     <p>Name:</p>
-    <input name="item_name" type="text" maxLength="80" placeholder="{{ item.name }}">
+    <input name="item_name" type="text" maxLength="80">
     <p>Description:</p>
-    <input name="item_desc" type="text" maxLength="500" placeholder="{{ item.desc }}">
+    <input name="item_desc" type="text" maxLength="500">
     <p>Category:</p>
     {% if numcats == 0 %}
     <p>You should probably put some categories in the database!</p>
     {% else %}
     <select name="item_cat_name">
       {% for c in cats %}
-      {% if c.name == item.category.name %}
-      <option value="{{ c.name }}" selected>{{ c.name }}</option>
-      {% else %}
       <option value="{{ c.name }}">{{ c.name }}</option>
-      {% endif %}
       {% endfor %}
     </select>
     {% endif %}
