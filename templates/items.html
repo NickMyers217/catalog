@@ -8,8 +8,9 @@
 
 {% block content %}
 <section id="cards" class="section--center mdl-grid">
+  <div class="mdl-cell mdl-cell--1-col mdl-cell--hide-tablet"></div>
   <div class="mdl-card-square mdl-card mdl-shadow--8dp mdl-cell mdl-cell--4-col mdl-cell--12-col-tablet">
-    <div class="mdl-card__title">
+    <div class="mdl-card__title mdl-color--primary mdl-color-text--white">
       <h2 class="mdl-card__title-text">Categories</h2>
     </div>
     <div class="mdl-card__supporting-text">
@@ -24,8 +25,8 @@
       {% endif %}
     </div>
   </div>
-  <div class="mdl-card-square mdl-card mdl-shadow--8dp mdl-cell mdl-cell--8-col mdl-cell--12-col-tablet">
-    <div class="mdl-card__title">
+  <div class="mdl-card-square mdl-card mdl-shadow--8dp mdl-cell mdl-cell--6-col mdl-cell--12-col-tablet">
+    <div class="mdl-card__title mdl-color--primary mdl-color-text--white">
       <h2 class="mdl-card__title-text">{{ cat }} Items ({{ cnt }} items)</h2>
     </div>
     <div class="mdl-card__supporting-text">
@@ -44,6 +45,10 @@
       <h5>It looks lonely here with no items :(</h5>
       {% endif %}
     </div>
+    <a href="{{ url_for('itemNew') }}" class="card-fab mdl-button mdl-js-button mdl-button--fab mdl-js-ripple-effect mdl-button--colored">
+      <i class="material-icons">create</i>
+    </a>
   </div>
+  <div class="mdl-cell mdl-cell--1-col mdl-cell--hide-tablet"></div>
 </section>
 {% endblock %}

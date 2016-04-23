@@ -86,7 +86,12 @@ def create_user():
 def landing():
     cats = db.query(Category).all()
     items = db.query(Item).limit(10).all()
-    return render_template('catalog.html', cats=cats, items=items, logged_in=is_logged_in())
+    if is_logged_in():
+        user_img = session['picture']
+        return render_template('catalog.html', cats=cats, items=items, logged_in=True,
+                               user_img=user_img)
+    else:
+        return render_template('catalog.html', cats=cats, items=items, logged_in=False)
 
 
 # Ajax route for google oauth
@@ -188,7 +193,7 @@ def googleLogout():
         del session['username']
         del session['email']
         del session['picture']
-        return quick_json_res('Disconnected!', 200)
+        return redirect(url_for('landing'))
     else:
         return quick_json_res('Failed to revoke token!', 400)
 
