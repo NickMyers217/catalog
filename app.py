@@ -86,7 +86,7 @@ def create_user():
 def landing():
     cats = db.query(Category).all()
     items = db.query(Item).limit(10).all()
-    return render_template('catalog.html', cats=cats, items=items)
+    return render_template('catalog.html', cats=cats, items=items, logged_in=is_logged_in())
 
 
 # Ajax route for google oauth
@@ -202,19 +202,21 @@ def showLogin():
     state = ''.join(random.choice(string.ascii_uppercase + string.digits)
                     for x in xrange(32))
     session['state'] = state
-    return render_template('login.html', state=session['state'])
+    return render_template('login.html', state=session['state'], logged_in=is_logged_in())
 
 
 # Route to show a categorie's items
 @app.route('/catalog/<cat_name>/')
 @app.route('/catalog/<cat_name>/items/')
 def items(cat_name):
+    cats = db.query(Category).all()
     category = db.query(Category).filter_by(name=cat_name)
     # Make sure the category exists
     if category.count() == 0:
         return '404 not found'
     items = db.query(Item).filter_by(category_id = category.one().id)
-    return render_template('items.html', cat=cat_name, items=items.all(), cnt=items.count())
+    return render_template('items.html', cats=cats, cat=cat_name, items=items.all(), cnt=items.count(),
+                           logged_in=is_logged_in())
 
 
 # Route to show a single item within a category
@@ -228,7 +230,10 @@ def itemDesc(cat_name, item_name):
     # Make sure th item exists
     if item.count() == 0:
         return '404 not found'
-    return render_template('item.html', cat=cat_name, item=item.one())
+    # See if the user created this item, if so they can edit it
+    can_edit = is_logged_in() and get_user_id(session['email']) == item.one().user_id
+    return render_template('item.html', cat=cat_name, item=item.one(), can_edit=can_edit,
+                           logged_in=is_logged_in())
 
 
 # Route to add a new item
@@ -241,7 +246,8 @@ def itemNew():
     # Display the form for GET requests
     if request.method == 'GET':
         cats = db.query(Category)
-        return render_template('item_new.html', numcats=cats.count(), cats=cats.all())
+        return render_template('item_new.html', numcats=cats.count(), cats=cats.all(),
+                               logged_in=is_logged_in())
     
     # Handle the database for POST requests
     if request.method == 'POST':
@@ -275,7 +281,7 @@ def itemEdit(item_name):
             return '404 not found'
         cats = db.query(Category)
         return render_template('item_edit.html', numcats=cats.count(), cats=cats.all(),
-                               item=item.one())
+                               item=item.one(), logged_in=is_logged_in())
 
     # Handle the database for POST requests
     if request.method == 'POST':
@@ -314,7 +320,7 @@ def itemDelete(item_name):
         # Make sure the item exists
         if item.count() == 0:
             return '404 not found'
-        return render_template('item_delete.html', item=item.one())
+        return render_template('item_delete.html', item=item.one(), logged_in=is_logged_in())
 
     # Handle the database for post requests
     if request.method == 'POST':
