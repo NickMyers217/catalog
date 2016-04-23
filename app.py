@@ -85,7 +85,7 @@ def create_user():
 @app.route('/catalog')
 def landing():
     cats = db.query(Category).all()
-    items = db.query(Item).all()
+    items = db.query(Item).limit(10).all()
     return render_template('catalog.html', cats=cats, items=items)
 
 
