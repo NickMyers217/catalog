@@ -8,10 +8,8 @@ To get the app up and running locally, use the following commands from your shel
 git clone https://github.com/nickmyers217/catalog
 cd catalog
 python database_setup.py
-touch client_secrets.json
-touch fb_client_secrets.json
 ```
-That will create the tournament database on your system and set up the database with some intial records.
+That will create the database on your system and populate it with some intial records.
 
 #### Setting Up Oauth
 In order for ouath to work properly for the app, the server and client need to be aware of your google and facebook information. You'll have to go create an app in the developer portal of each. Then follow the instructions below.
