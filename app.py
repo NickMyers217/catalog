@@ -2,7 +2,7 @@
 
 import random, string, json, httplib2, requests
 
-from flask import Flask, render_template, request, redirect, url_for, session, make_response
+from flask import Flask, render_template, request, redirect, url_for, session, make_response, flash
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from database import Base, Category, Item, User
@@ -161,16 +161,9 @@ def googleLogin():
     session['email'] = data['email']
     create_user()
 
-    output = ''
-    output += '<h1>Welcome, '
-    output += session['username']
-    output += '!</h1>'
-    output += '<img src="'
-    output += session['picture']
-    output += ' " style = "width: 300px; height: 300px;border-radius: 150px;-webkit-border-radius: 150px;-moz-border-radius: 150px;"> '
-
+    flash('Logged in!')
     print 'Success!'
-    return output
+    return 'Success!'
 
 
 # Route to disconnect a Google user
@@ -179,7 +172,7 @@ def googleLogout():
     # Check to make sure the user is actually logged in
     credentials = session.get('credentials')
     if credentials is None:
-        return quick_json_res('Current user not logged in.', 401)
+        return redirect(url_for('showLogin'))
 
     # Use the google api to revoke the token
     url = 'https://accounts.google.com/o/oauth2/revoke?token=%s' % credentials
@@ -193,9 +186,11 @@ def googleLogout():
         del session['username']
         del session['email']
         del session['picture']
+        flash('Succesfully logged out!')
         return redirect(url_for('landing'))
     else:
-        return quick_json_res('Failed to revoke token!', 400)
+        flash('There was a problem logging out, please try again!')
+        return redirect(url_for('landing'))
 
 
 # Route for logging in
@@ -207,7 +202,11 @@ def showLogin():
     state = ''.join(random.choice(string.ascii_uppercase + string.digits)
                     for x in xrange(32))
     session['state'] = state
-    return render_template('login.html', state=session['state'], logged_in=is_logged_in())
+    if is_logged_in():
+        return render_template('login.html', state=session['state'], logged_in=True,
+                               user_img=session['picture'])
+    else:
+        return render_template('login.html', state=session['state'], logged_in=False)
 
 
 # Route to show a categorie's items
@@ -220,8 +219,12 @@ def items(cat_name):
     if category.count() == 0:
         return '404 not found'
     items = db.query(Item).filter_by(category_id = category.one().id)
-    return render_template('items.html', cats=cats, cat=cat_name, items=items.all(), cnt=items.count(),
-                           logged_in=is_logged_in())
+    if is_logged_in():
+        return render_template('items.html', cats=cats, cat=cat_name, items=items.all(),
+                               cnt=items.count(), logged_in=True, user_img=session['picture'])
+    else:
+        return render_template('items.html', cats=cats, cat=cat_name, items=items.all(),
+                               cnt=items.count(), logged_in=False)
 
 
 # Route to show a single item within a category
@@ -237,8 +240,12 @@ def itemDesc(cat_name, item_name):
         return '404 not found'
     # See if the user created this item, if so they can edit it
     can_edit = is_logged_in() and get_user_id(session['email']) == item.one().user_id
-    return render_template('item.html', cat=cat_name, item=item.one(), can_edit=can_edit,
-                           logged_in=is_logged_in())
+    if is_logged_in():
+        return render_template('item.html', cat=cat_name, item=item.one(), can_edit=can_edit,
+                               logged_in=True, user_img=session['picture'])
+    else:
+        return render_template('item.html', cat=cat_name, item=item.one(), can_edit=can_edit,
+                               logged_in=False)
 
 
 # Route to add a new item
@@ -252,7 +259,7 @@ def itemNew():
     if request.method == 'GET':
         cats = db.query(Category)
         return render_template('item_new.html', numcats=cats.count(), cats=cats.all(),
-                               logged_in=is_logged_in())
+                               logged_in=True, user_img=session['picture'])
     
     # Handle the database for POST requests
     if request.method == 'POST':
@@ -268,6 +275,7 @@ def itemNew():
             db.add(item)
             db.commit()
         # Redirect to landing
+        flash('%s succesfully created!' % item_name)
         return redirect(url_for('landing'))
 
 
@@ -284,9 +292,12 @@ def itemEdit(item_name):
         # Make sure the item exists
         if item.count() == 0:
             return '404 not found'
+        # Make sure the user can edit this item
+        if item.one().user_id != get_user_id(session['email']):
+            return redirect(url_for('landing'))
         cats = db.query(Category)
         return render_template('item_edit.html', numcats=cats.count(), cats=cats.all(),
-                               item=item.one(), logged_in=is_logged_in())
+                               item=item.one(), logged_in=True, user_img=session['picture'])
 
     # Handle the database for POST requests
     if request.method == 'POST':
@@ -309,6 +320,7 @@ def itemEdit(item_name):
                     item.category = cats.one()
                     db.commit()
         # Redirect to landing
+        flash('%s succesfully edited!' % new_item_name)
         return redirect(url_for('landing'))
 
 
@@ -325,7 +337,11 @@ def itemDelete(item_name):
         # Make sure the item exists
         if item.count() == 0:
             return '404 not found'
-        return render_template('item_delete.html', item=item.one(), logged_in=is_logged_in())
+        # Make sure the user can edit this item
+        if item.one().user_id != get_user_id(session['email']):
+            return redirect(url_for('landing'))
+        return render_template('item_delete.html', item=item.one(), logged_in=True,
+                               user_img=session['picture'])
 
     # Handle the database for post requests
     if request.method == 'POST':
@@ -337,6 +353,7 @@ def itemDelete(item_name):
                 db.delete(item.one())
                 db.commit()
         # Redirect to the landing
+        flash('%s succesfully deleted!' % item_name)
         return redirect(url_for('landing'))
 
 

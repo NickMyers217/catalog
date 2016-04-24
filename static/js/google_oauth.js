@@ -8,7 +8,7 @@
     })
 })()
 
-// Signs users out of the client
+// Signs users out of the client side
 function signOut () {
     var auth2 = gapi.auth2.getAuthInstance()
     if(auth2.isSignedIn.get()) {
@@ -16,7 +16,7 @@ function signOut () {
     }
 }
 
-// Callback to sign a user in on the server
+// Callback to sign a user in on the server side
 function onSignIn (authResult) {
     if (authResult.code) {
 	// Verify the token on the back end via AJAX
@@ -29,15 +29,19 @@ function onSignIn (authResult) {
 	    success: function (result) {
 		// Handle or verify the server response if necessary.
 		if (result) {
-		    $('#result').html('Login Successful!<br>'+ result)
+		    console.log('Login Successful!<br>'+ result)
+		    // Redirect to the home page
+		    window.location.replace('/catalog')
 		} else if (authResult.error) {
 		    console.log('There was an error: ' + authResult.error)
+		    flashMessage('There was an error: '+ authResult.error)
 		} else {
-		    $('#result').html('Failed to make a server-side call.')
+		    $('#result').html('Failed to log in, something is wrong!')
 		}
 	    },
 	    failure: function (result) {
 		console.log(result)
+		flashMessage(result)
 	    }
 	})
     }
@@ -46,4 +50,5 @@ function onSignIn (authResult) {
 // Failure callback
 function onSignInFailure () {
     console.log('Failed to sign in!');
+    flashMessage('Failed to sign in, please try again!')
 }
