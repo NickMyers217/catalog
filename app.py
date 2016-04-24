@@ -368,9 +368,13 @@ def itemNew():
         item_name = request.form['item_name']
         item_desc = request.form['item_desc']
         item_cat_name = request.form['item_cat_name']
-        cats = db.query(Category).filter_by(name=item_cat_name)
         # Make sure the item's category is valid
+        cats = db.query(Category).filter_by(name=item_cat_name)
         if cats.count() > 0:
+            # Make sure the item doesn't already exist
+            if db.query(Item).filter_by(name=item_name).count() > 0:
+                flash('This item already exists! :(')
+                return redirect(url_for('itemNew'))
             # Add the item to the database
             user_id = get_user_id(session['email'])
             item = Item(name=item_name, desc=item_desc, category=cats.one(), user_id=user_id)
@@ -405,22 +409,32 @@ def itemEdit(item_name):
     if request.method == 'POST':
         new_item_name = request.form['item_name']
         new_item_desc = request.form['item_desc']
-        item_cat_name = request.form['item_cat_name']
-        cats = db.query(Category).filter_by(name=item_cat_name)
-        # Make sure the item's category is valid
-        if cats.count() > 0:
-            items = db.query(Item).filter_by(category_id=cats.one().id, name=item_name)
-            # Make sure the item exists
+        old_item_cat_name = request.form['old_item_cat_name']
+        new_item_cat_name = request.form['item_cat_name']
+
+        # Make sure the item's old category exists
+        old_cat = db.query(Category).filter_by(name=old_item_cat_name)
+        if old_cat.count() > 0:
+            # Make sure the item exists currently
+            items = db.query(Item).filter_by(name=item_name, category_id=old_cat.one().id)
             if items.count() > 0:
-                item = items.one()
-                # Make sure the correct user is issuing this request
-                if item.user_id == get_user_id(session['email']):
-                    # Edit the item
-                    item.name = new_item_name
-                    item.desc = new_item_desc
-                    # TODO: get this bug fixed
-                    item.category = cats.one()
-                    db.commit()
+                # Make sure the item's proposed category is valid
+                cats = db.query(Category).filter_by(name=new_item_cat_name)
+                if cats.count() > 0:
+                    item = items.one()
+                    # It should be a new item
+                    duplicate = db.query(Item).filter_by(name=new_item_name)
+                    if duplicate.count() != 0:
+                        flash('This item already exists! :(')
+                        return redirect(url_for('itemEdit', item_name=item_name))
+                                        
+                    # Make sure the correct user is issuing this request
+                    if item.user_id == get_user_id(session['email']):
+                        # Edit the item
+                        item.name = new_item_name
+                        item.desc = new_item_desc
+                        item.category = cats.one()
+                        db.commit()
         # Redirect to landing
         flash('%s succesfully edited!' % new_item_name)
         return redirect(url_for('landing'))

@@ -27,6 +27,7 @@
 	{% if numcats == 0 %}
 	<p>You should probably put some categories in the database!</p>
 	{% else %}
+	<input name="old_item_cat_name" type="hidden" value="{{ item.category.name }}">
 	<select name="item_cat_name">
 	  {% for c in cats %}
 	  {% if c.name == item.category.name %}
@@ -41,9 +42,11 @@
       <a href="{{ url_for('itemDesc', cat_name=item.category.name, item_name=item.name) }}" class="card-fab mdl-button mdl-js-button mdl-button--fab mdl-js-ripple-effect mdl-button--colored">
 	<i class="material-icons">arrow_back</i>
       </a>
+      {% if numcats > 0 %}
       <div class="mdl-card__actions mdl-card--border">
 	<input type="submit" class="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect mdl-button--colored" value="Submit">
       </div>
+      {% endif %}
     </form>
   </div>
 </section>
