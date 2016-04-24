@@ -1,0 +1,25 @@
+{% extends "layout.html" %}
+
+{% block title %} Page Not Found {% endblock %}
+
+{% block head %}
+  {{ super() }}
+{% endblock %}
+
+{% block content %}
+<section id="cards" class="section--center mdl-grid">
+  <div class="mdl-cell mdl-cell--4-col-desktop mdl-cell--2-col-tablet mdl-cell--hide-phone"></div>
+  <div class="mdl-card-square mdl-card mdl-shadow--8dp mdl-cell mdl-cell--4-col mdl-cell--12-col-phone">
+    <div class="mdl-card__title mdl-color--primary mdl-color-text--white">
+      <h2 class="mdl-card__title-text">404 Page Not Found</h2>
+    </div>
+    <div class="mdl-card__supporting-text">
+      <br>
+      <p>What you were looking for is not here! :(</p>
+    </div>
+    <a href="{{ url_for('landing') }}" class="card-fab mdl-button mdl-js-button mdl-button--fab mdl-js-ripple-effect mdl-button--colored">
+      <i class="material-icons">arrow_back</i>
+    </a>
+  </div>
+</section
+{% endblock %}
