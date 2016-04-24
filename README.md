@@ -12,7 +12,7 @@ python database_setup.py
 That will create the database on your system and populate it with some intial records.
 
 #### Setting Up Oauth
-In order for ouath to work properly for the app, the server and client need to be aware of your google and facebook information. You'll have to go create an app in the developer portal of each. Then follow the instructions below.
+In order for oauth to work properly for the app, the server and client need to be aware of your google and facebook information. You'll have to go create an app in the developer portal of each before following the instructions below.
 
 #### The server
 The next step is to create 2 files in the root directory to hold the client secrets for both google and facebook.
@@ -62,5 +62,5 @@ Now you have taken all the steps neccessary to get oauth working and its time to
 ``` shell
 python app.py
 ```
-If you recieve any errors of missing libraries, go ahead and use sudo pip install. Once the application is running, you can find on localhost:8080
+If you recieve any errors of missing libraries, go ahead and use sudo pip install. Once the application is running, you can find it on localhost:8080
 
