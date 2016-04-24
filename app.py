@@ -176,7 +176,8 @@ def googleLogin():
     session['username'] = data['name']
     session['picture'] = data['picture']
     session['email'] = data['email']
-    create_user()
+    session['provider'] = 'google'
+    session['user_id'] = create_user()
 
     flash('Logged in!')
     print 'Success!'
@@ -196,18 +197,79 @@ def googleLogout():
     h = httplib2.Http()
     result = h.request(url, 'GET')[0]
 
-    # Delete their information
-    if result['status'] == '200':
-        del session['credentials']
-        del session['gplus_id']
-        del session['username']
-        del session['email']
-        del session['picture']
-        flash('Succesfully logged out!')
-        return redirect(url_for('landing'))
-    else:
-        flash('There was a problem logging out, please try again!')
-        return redirect(url_for('landing'))
+    if result['status'] != '200':
+        return 'You were logged out!'
+
+
+# Route to log in a Facebook user
+@app.route('/fbLogin', methods=['POST'])
+def fbLogin():
+    print 'Beginnig facebook oauth login!'
+
+    # Verify the anti xss forgery token from the client matches
+    if request.args.get('state') != session['state']:
+        err = 'This might be an xss attack, aborted!'
+        print err
+        return quick_json_res(err, 401)
+
+    # Since this is not an xss attack, we can proceed
+    # and exchange the one time authorization code from facebook
+    access_token = request.data
+    print "Code exchanged!"
+    app_id = json.loads(open('fb_client_secrets.json', 'r').read())['web']['app_id']
+    app_secret = json.loads(open('fb_client_secrets.json', 'r').read())['web']['app_secret']
+    url = 'https://graph.facebook.com/oauth/access_token?grant_type=fb_exchange_token&client_id=%s&client_secret=%s&fb_exchange_token=%s' % (app_id, app_secret, access_token)
+    h = httplib2.Http()
+    result = h.request(url, 'GET')[1]
+
+    # Use token to get user info from API
+    userinfo_url = "https://graph.facebook.com/v2.4/me"
+    # strip expire tag from access token
+    token = result.split("&")[0]
+    url = 'https://graph.facebook.com/v2.4/me?%s&fields=name,id,email' % token
+    h = httplib2.Http()
+    result = h.request(url, 'GET')[1]
+    print "url sent for API access:%s"% url
+    print "API JSON result: %s" % result
+    data = json.loads(result)
+    print "Storing info"
+    session['provider'] = 'facebook'
+    session['username'] = data["name"]
+    session['email'] = data["email"]
+    session['facebook_id'] = data["id"]
+    
+    # The token must be stored in the login_session in order to properly logout
+    stored_token = token.split("=")[1]
+    session['credentials'] = stored_token
+
+    # Get user picture
+    url = 'https://graph.facebook.com/v2.4/me/picture?%s&redirect=0&height=200&width=200' % token
+    h = httplib2.Http()
+    result = h.request(url, 'GET')[1]
+    data = json.loads(result) 
+    session['picture'] = data["data"]["url"]
+
+    # see if user exists
+    user_id = get_user_id(session['email'])
+    if not user_id:
+        user_id = create_user()
+    session['user_id'] = user_id 
+    
+    flash('Logged in!')
+    print 'Success!'
+    return 'Success!'
+
+
+# Route to log a facebook user out
+@app.route('/fbLogout')
+def fbLogout():
+    facebook_id = session['facebook_id']
+    # The access token must me included to successfully logout
+    access_token = session['credentials']
+    url = 'https://graph.facebook.com/%s/permissions?access_token=%s' % (facebook_id,access_token)
+    h = httplib2.Http()
+    result = h.request(url, 'DELETE')[1]
+    return 'you have been logged out'
 
 
 # Route for logging in
@@ -224,6 +286,29 @@ def showLogin():
                                user_img=session['picture'])
     else:
         return render_template('login.html', state=session['state'], logged_in=False)
+
+
+# Route to revoke a current user's token and reset their session
+@app.route('/logout')
+def logout():
+    if 'provider' in session:
+        if session['provider'] == 'google':
+            googleLogout()
+            del session['gplus_id']
+            del session['credentials']
+        if session['provider'] == 'facebook':
+            fbLogout()
+            del session['facebook_id']
+        del session['username']
+        del session['email']
+        del session['picture']
+        del session['user_id']
+        del session['provider']
+        flash('You have successfully been logged out.')
+        return redirect(url_for('landing'))
+    else:
+        flash('You were not logged in.')
+        return redirect(url_for('langing'))
 
 
 # Route to show a categorie's items

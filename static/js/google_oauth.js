@@ -19,6 +19,8 @@ function signOut () {
 // Callback to sign a user in on the server side
 function onSignIn (authResult) {
     if (authResult.code) {
+	$('#loginButtons').hide()
+	$('#loading').show()
 	// Verify the token on the back end via AJAX
 	$.ajax({
 	    type: 'POST',
@@ -36,7 +38,7 @@ function onSignIn (authResult) {
 		    console.log('There was an error: ' + authResult.error)
 		    flashMessage('There was an error: '+ authResult.error)
 		} else {
-		    $('#result').html('Failed to log in, something is wrong!')
+		    flashMessage('Failed to log in, something is wrong!')
 		}
 	    },
 	    failure: function (result) {

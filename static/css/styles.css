@@ -13,3 +13,10 @@
     width: 32px;
     height: 32px;
 }
+
+#loading {
+    display: none;
+    position: absolute;
+    top: 48%;
+    left: 48%;
+}

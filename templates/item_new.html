@@ -16,11 +16,11 @@
     <form method="POST" action="{{ url_for('itemNew') }}">
       <div class="mdl-card__supporting-text">
 	<div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
-	  <input class="mdl-textfield__input" type="text" name="item_name" maxLength="80">
+	  <input class="mdl-textfield__input" type="text" name="item_name" maxLength="80" required>
 	  <label class="mdl-textfield__label" for="item_name">Name</label>
 	</div>
 	<div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
-	  <input class="mdl-textfield__input" type="text" name="item_desc" maxLength="500">
+	  <input class="mdl-textfield__input" type="text" name="item_desc" maxLength="500" required>
 	  <label class="mdl-textfield__label" for="item_desc">Description</label>
 	</div>
 	<p>Category:</p>
