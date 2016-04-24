@@ -25,6 +25,14 @@ class Category(Base):
 
     id            = Column(Integer, primary_key = True)
     name          = Column(String(80), nullable = False)
+
+    @property
+    def serialize(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'items': []
+        }
     
 
 # Map the item table, and its relationship to category
@@ -38,6 +46,15 @@ class Item(Base):
     desc          = Column(String(500), nullable = False)
     user          = relationship(User)
     category      = relationship(Category)
+
+    @property
+    def serialize(self):
+        return {
+            'category_id': self.category_id,
+            'desc': self.desc,
+            'id': self.id,
+            'name': self.name
+        }
 
 
 engine = create_engine('sqlite:///catalog.db')

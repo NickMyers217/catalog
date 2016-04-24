@@ -2,7 +2,8 @@
 
 import random, string, json, httplib2, requests
 
-from flask import Flask, render_template, request, redirect, url_for, session, make_response, flash
+from flask import Flask, render_template, request, redirect, url_for, session, \
+    make_response, flash, jsonify
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from database import Base, Category, Item, User
@@ -92,6 +93,22 @@ def landing():
                                user_img=user_img)
     else:
         return render_template('catalog.html', cats=cats, items=items, logged_in=False)
+
+
+# JSON mapping of the catalog
+@app.route('/catalog.json')
+def catalogJSON():
+    def itemToDict(item):
+        return item.serialize
+
+    def catToDict(cat):
+        tempCat = cat.serialize
+        items = db.query(Item).filter_by(category_id = tempCat['id']).all()
+        tempCat['items'] = map(itemToDict, items)
+        return tempCat
+
+    cats = db.query(Category).all()
+    return jsonify(categories=map(catToDict, cats))
 
 
 # Ajax route for google oauth
