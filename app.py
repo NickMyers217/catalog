@@ -44,7 +44,7 @@ def is_logged_in():
     return 'username' in session
 
 
-# Utility for querying usert in the database
+# Utility for querying users in the database
 def get_user_info(user_id):
     ''' Returns a user from the database
       Args:
@@ -319,7 +319,7 @@ def items(cat_name):
     category = db.query(Category).filter_by(name=cat_name)
     # Make sure the category exists
     if category.count() == 0:
-        return '404 not found'
+        return pageNotFound('404')
     items = db.query(Item).filter_by(category_id = category.one().id)
     if is_logged_in():
         return render_template('items.html', cats=cats, cat=cat_name, items=items.all(),
@@ -335,11 +335,11 @@ def itemDesc(cat_name, item_name):
     category = db.query(Category).filter_by(name=cat_name)
     # Make sure the category exists
     if category.count() == 0:
-        return '404 not found'
+        return pageNotFound('404')
     item = db.query(Item).filter_by(category_id=category.one().id, name=item_name)
     # Make sure th item exists
     if item.count() == 0:
-        return '404 not found'
+        return pageNotFound('404')
     # See if the user created this item, if so they can edit it
     can_edit = is_logged_in() and get_user_id(session['email']) == item.one().user_id
     if is_logged_in():
@@ -393,7 +393,7 @@ def itemEdit(item_name):
         item = db.query(Item).filter_by(name=item_name)
         # Make sure the item exists
         if item.count() == 0:
-            return '404 not found'
+            return pageNotFound('404')
         # Make sure the user can edit this item
         if item.one().user_id != get_user_id(session['email']):
             return redirect(url_for('landing'))
@@ -438,7 +438,7 @@ def itemDelete(item_name):
         item = db.query(Item).filter_by(name=item_name)
         # Make sure the item exists
         if item.count() == 0:
-            return '404 not found'
+            return pageNotFound('404')
         # Make sure the user can edit this item
         if item.one().user_id != get_user_id(session['email']):
             return redirect(url_for('landing'))
@@ -457,6 +457,16 @@ def itemDelete(item_name):
         # Redirect to the landing
         flash('%s succesfully deleted!' % item_name)
         return redirect(url_for('landing'))
+
+
+# A custom 404 route
+@app.errorhandler(404)
+def pageNotFound(e):
+    print e
+    if is_logged_in():
+        return render_template('404.html', logged_in=True, user_img=session['picture']), 404
+    else:
+        return render_template('404.html', logged_in=False), 404
 
 
 # Start the server

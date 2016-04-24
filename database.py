@@ -35,7 +35,7 @@ class Category(Base):
         }
     
 
-# Map the item table, and its relationship to category
+# Map the item table
 class Item(Base):
     __tablename__ = 'item'
 
